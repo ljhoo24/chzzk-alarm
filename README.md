@@ -4,12 +4,21 @@
 
 ## 설치 (개발자 모드)
 
-1. `chrome://extensions` → 우측 상단 **개발자 모드** 켜기
-2. **압축해제된 확장 프로그램을 로드합니다** → 이 폴더(`manifest.json`이 있는 곳) 선택
-3. 설치 직후 열리는 설정 페이지에서 채널 URL을 붙여 넣어 등록
-4. 설정 페이지의 **초기 설정 체크리스트** 확인(Windows 알림 권한, 방해 금지 모드, 테스트 알림)
+1. [Releases](https://github.com/ljhoo24/chzzk-alarm/releases)에서 `chzzk-alarm-vX.Y.Z.zip`을 받아 원하는 폴더에 압축 해제(또는 이 저장소를 클론)
+2. `chrome://extensions` → 우측 상단 **개발자 모드** 켜기
+3. **압축해제된 확장 프로그램을 로드합니다** → `manifest.json`이 있는 폴더 선택
+4. 설치 직후 열리는 설정 페이지에서 채널 URL을 붙여 넣어 등록
+5. 설정 페이지의 **초기 설정 체크리스트** 확인(Windows 알림 권한, 방해 금지 모드, 테스트 알림)
 
-코드 수정 후에는 확장 카드의 새로고침 버튼으로 다시 로드합니다.
+코드 수정 후에는 확장 카드의 새로고침 버튼으로 다시 로드합니다. 압축 해제한 폴더를 지우거나 옮기면 확장이 사라지므로 고정된 위치에 두세요.
+
+### 배포용 zip 만들기
+
+```bash
+npm run package
+```
+
+커밋된 HEAD 기준으로 `manifest.json`, `src/`, `icons/`만 담아 `dist/chzzk-alarm-v{manifest 버전}.zip`을 만듭니다.
 
 ## 구현 범위
 
@@ -54,6 +63,7 @@ src/
   options/               채널 등록·설정·디버그(모의 상태)·이벤트 로그
 tests/                   node:test 단위·통합 테스트
 tools/make-icons.mjs     아이콘 PNG 생성
+tools/package.mjs        배포용 zip 생성
 ```
 
 ## 테스트
