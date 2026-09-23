@@ -10,15 +10,24 @@
     <h1>라이브 <span id="live-count">0</span></h1>
     <div class="actions">
       <button id="refresh" title="지금 조회">↻</button>
+      <button id="stats" title="방송 기록·통계">📊</button>
       <button id="options" title="설정">⚙</button>
     </div>
   </header>
+  <div id="current" class="current" hidden>
+    <span id="current-text"></span>
+    <button id="current-add" type="button">이 채널 등록</button>
+  </div>
   <div id="warning" class="warning" hidden></div>
   <div id="debug" class="debug" hidden>디버그 모드: 모의 상태 제공자 사용 중</div>
   <ul id="live-list"></ul>
   <p id="empty" class="empty" hidden></p>
+  <details id="offline" hidden>
+    <summary id="offline-summary"></summary>
+    <ul id="offline-list"></ul>
+  </details>
   <footer>
-    <span id="offline-count"></span>
+    <span></span>
     <span id="last-poll"></span>
   </footer>
   <script type="module" src="popup.js"></script>

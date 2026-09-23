@@ -77,3 +77,32 @@ footer {
   color: var(--muted);
   font-size: 11px;
 }
+
+.current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 12px 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.current span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.current button {
+  flex: none;
+  border: 1px solid var(--accent);
+  color: var(--fg);
+  background: transparent;
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font: inherit;
+}
+.current button:disabled { opacity: .5; cursor: default; }
+details { border-top: 1px solid var(--line); }
+summary { padding: 8px 12px; cursor: pointer; color: var(--muted); font-size: 12px; }
+#offline-list li { grid-template-columns: 28px 1fr; padding: 5px 12px; align-items: center; }
+#offline-list li img, #offline-list li .noimg { width: 28px; height: 28px; }
+#offline-list .sub { color: var(--muted); font-size: 11px; }

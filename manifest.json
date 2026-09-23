@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "치지직 라이브 알림",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "등록한 치지직 채널의 방송 시작을 알리고, 열어 둔 오프라인 라이브 페이지를 자동으로 새로고침합니다.",
   "minimum_chrome_version": "120",
   "background": {

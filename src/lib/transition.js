@@ -18,6 +18,7 @@ export const INITIAL_STATE = Object.freeze({
   lastError: null,
   lastCheckedAt: null,
   lastSuccessAt: null,
+  lastChangeNotifiedAt: null,
   title: '',
   category: '',
   viewers: 0,
@@ -58,20 +59,68 @@ export function decideNotify(prev, obs, ctx) {
     return { notify: false, reason: 'startup-disabled' };
   }
   if (!channel.notify) return { notify: false, reason: 'channel-off' };
+  if (isMuted(ctx)) return { notify: false, reason: 'muted-today' };
   if (!matchesKeywords(channel.keywords, obs.title, obs.category)) {
     return { notify: false, reason: 'keyword-filter' };
   }
-  if (settings.quietHours.enabled && isWithinDailyWindow(now, settings.quietHours.start, settings.quietHours.end)) {
-    return { notify: false, reason: 'quiet-hours' };
-  }
+  if (inQuietHours(ctx)) return { notify: false, reason: 'quiet-hours' };
   return { notify: true, reason: startup ? 'startup' : 'went-live' };
+}
+
+const isMuted = ({ mutedUntil, now }) => Number.isFinite(mutedUntil) && mutedUntil > now;
+const inQuietHours = ({ settings, now }) =>
+  settings.quietHours.enabled && isWithinDailyWindow(now, settings.quietHours.start, settings.quietHours.end);
+
+// 방송 중 변경 알림의 채널별 최소 간격(카테고리가 오락가락할 때 폭주 방지).
+export const CHANGE_NOTIFY_COOLDOWN_MS = 5 * 60_000;
+
+/**
+ * 같은 방송 안에서의 변경 판정. 알릴 만한 변경이 없으면 null.
+ *  - 카테고리 변경: 채널의 notifyCategoryChange가 켜져 있고, 새 제목·카테고리가 키워드 필터를 통과할 때
+ *  - 키워드 새로 일치: 키워드가 있고, 이전에는 불일치였다가 이번에 일치할 때(시작 알림이 키워드로 생략된 경우 포함)
+ */
+export function decideChange(prev, obs, ctx) {
+  const { channel, now } = ctx;
+  const categoryChanged = !!prev.category && !!obs.category && prev.category !== obs.category;
+  const hasKeywords = (channel.keywords || []).some((k) => String(k).trim());
+  const keywordMatched =
+    hasKeywords &&
+    !matchesKeywords(channel.keywords, prev.title, prev.category) &&
+    matchesKeywords(channel.keywords, obs.title, obs.category);
+  const wanted =
+    (categoryChanged && channel.notifyCategoryChange && matchesKeywords(channel.keywords, obs.title, obs.category)) ||
+    keywordMatched;
+  if (!wanted) return null;
+
+  const change = {
+    type: 'live_changed',
+    openDate: obs.openDate,
+    categoryFrom: categoryChanged ? prev.category : null,
+    categoryTo: categoryChanged ? obs.category : null,
+    keywordMatched,
+  };
+  let reason = null;
+  if (!channel.notify) reason = 'channel-off';
+  else if (isMuted(ctx)) reason = 'muted-today';
+  else if (inQuietHours(ctx)) reason = 'quiet-hours';
+  else if (prev.lastChangeNotifiedAt != null && now - prev.lastChangeNotifiedAt < CHANGE_NOTIFY_COOLDOWN_MS) reason = 'cooldown';
+  return { ...change, notify: reason == null, reason: reason ?? (keywordMatched ? 'keyword-matched' : 'category-changed') };
+}
+
+// 방송 시작 시 탭 포커스·새 탭 열기를 허용하는 판정 결과.
+// 재시작 유예·키워드 불일치·알림 금지 시간·오늘 끄기, 브라우저 시작 직후(여러 탭이 한꺼번에 열림)는 제외한다.
+// 제외돼도 오프라인 탭 자동 새로고침은 별개로 동작한다.
+const OPEN_ON_LIVE_REASONS = new Set(['went-live', 'channel-off', 'active-tab-reload']);
+
+export function shouldOpenOnLive(channel, reason) {
+  return !!channel.openOnLive && OPEN_ON_LIVE_REASONS.has(reason);
 }
 
 /**
  * @param prev 이전 상태(없으면 INITIAL_STATE)
  * @param obs  StatusProvider Observation
- * @param ctx  { now, settings, channel, firstObsThisSession }
- * @returns {{ state, events: Array<{type: 'went_live'|'went_offline', ...}> }}
+ * @param ctx  { now, settings, channel, firstObsThisSession, mutedUntil }
+ * @returns {{ state, events: Array<{type: 'went_live'|'went_offline'|'live_changed', ...}> }}
  */
 export function evaluate(prevIn, obs, ctx) {
   const prev = { ...INITIAL_STATE, ...(prevIn || {}) };
@@ -99,7 +148,12 @@ export function evaluate(prevIn, obs, ctx) {
   if (obs.status === 'OPEN') {
     const isNewBroadcast = prev.status !== 'OPEN' || prev.openDate !== obs.openDate;
     if (!isNewBroadcast) {
-      return { state: { ...base, status: 'OPEN' }, events };
+      const change = decideChange(prev, obs, ctx);
+      if (change) events.push(change);
+      return {
+        state: { ...base, status: 'OPEN', lastChangeNotifiedAt: change?.notify ? now : prev.lastChangeNotifiedAt },
+        events,
+      };
     }
     const decision = decideNotify(prev, obs, ctx);
     events.push({
@@ -117,6 +171,7 @@ export function evaluate(prevIn, obs, ctx) {
         closeDate: null,
         lastChangeAt: now,
         alertedOpenDate: obs.openDate,
+        lastChangeNotifiedAt: null,
       },
       events,
     };

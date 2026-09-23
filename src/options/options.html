@@ -7,7 +7,10 @@
 </head>
 <body>
   <main>
-    <h1>치지직 라이브 알림</h1>
+    <header class="top">
+      <h1>치지직 라이브 알림</h1>
+      <a href="../stats/stats.html" class="link-btn">📊 방송 기록·통계</a>
+    </header>
 
     <section>
       <h2>채널</h2>
@@ -23,6 +26,8 @@
             <th>상태</th>
             <th title="방송 시작 알림">알림</th>
             <th title="오프라인 라이브 페이지 자동 새로고침">새로고침</th>
+            <th title="방송 시작 시 새로고침한 탭으로 포커스, 열린 탭이 없으면 새 탭으로 열기">탭 열기</th>
+            <th title="방송 중 카테고리가 바뀌면 알림">카테고리 변경</th>
             <th title="제목·카테고리에 포함될 때만 알림(쉼표로 구분, 비우면 항상)">키워드</th>
             <th></th>
           </tr>
@@ -42,6 +47,9 @@
         <label class="check"><input name="notifyExistingOnStartup" type="checkbox">브라우저 시작 시 이미 진행 중인 방송도 알림</label>
         <label class="check"><input name="requireInteraction" type="checkbox">알림을 닫을 때까지 화면에 유지</label>
         <label class="check"><input name="skipNotifyIfActiveReload" type="checkbox">새로고침한 탭을 보고 있으면 알림 생략</label>
+        <label class="check"><input name="focusOnLive" type="checkbox">방송 시작 시 탭으로 포커스 전환(끄면 백그라운드로 열기)</label>
+        <label class="check"><input name="muteBackgroundTabs" type="checkbox">자동 새로고침·자동으로 연 백그라운드 탭 음소거(탭을 보면 해제)</label>
+        <label class="check"><input name="stallNotify" type="checkbox">감지가 멈추면(연속 조회 실패) Windows 알림으로 경고</label>
         <fieldset>
           <legend><label class="check"><input name="quietHours.enabled" type="checkbox">알림 금지 시간대</label></legend>
           <input name="quietHours.start" type="time"> ~ <input name="quietHours.end" type="time">
@@ -51,6 +59,27 @@
           <span id="settings-msg" class="msg" hidden></span>
         </div>
       </form>
+    </section>
+
+    <section>
+      <h2>동기화 · 백업</h2>
+      <label class="check"><input id="sync-enabled" type="checkbox">채널·설정을 구글 계정에 동기화</label>
+      <p class="muted small">크롬에 로그인하고 동기화 설정에서 <b>확장 프로그램</b>이 켜져 있어야 다른 기기와 동기화됩니다. 디버그 모드·동기화 여부는 기기별로 따로 저장됩니다.</p>
+      <p id="sync-status" class="msg"></p>
+      <div class="row">
+        <button id="sync-now" type="button">지금 동기화</button>
+      </div>
+      <h3>파일 백업</h3>
+      <div class="row wrap">
+        <button id="export" type="button">파일로 내보내기</button>
+        <label class="check"><input id="export-history" type="checkbox" checked>방송 기록 포함</label>
+      </div>
+      <div class="row wrap">
+        <button id="import" type="button">파일에서 가져오기</button>
+        <label class="check"><input id="import-replace" type="checkbox">기존 채널을 모두 지우고 바꾸기(끄면 합치기)</label>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
+      </div>
+      <p id="backup-msg" class="msg" hidden></p>
     </section>
 
     <section>

@@ -21,17 +21,33 @@ export const DEFAULT_SETTINGS = Object.freeze({
   quietHours: { enabled: false, start: '01:00', end: '08:00' },
   // 연속 조회 실패가 이 횟수 이상이면 배지 경고.
   failWarnThreshold: 3,
+  // 연속 실패 기준을 넘는 순간 Windows 알림으로도 1회 경고.
+  stallNotify: true,
+  // 방송 시작 시 새로고침한 탭(없으면 새로 연 탭)으로 포커스 전환. 끄면 백그라운드로 두고 음소거.
+  focusOnLive: true,
+  // 자동 새로고침·자동 열기한 백그라운드 탭을 음소거(탭을 보면 해제).
+  muteBackgroundTabs: true,
+  // 채널·설정을 구글 계정(chrome.storage.sync)에 동기화. 기기별 설정이라 동기화 대상 아님.
+  syncEnabled: true,
   // 모의 상태 제공자 사용(옵션 페이지에서 상태를 수동 전환).
   debugMode: false,
 });
+
+// 기기마다 다르게 둘 설정(동기화하지 않음).
+export const DEVICE_ONLY_SETTINGS = Object.freeze(['debugMode', 'syncEnabled']);
 
 export const DEFAULT_CHANNEL = Object.freeze({
   name: '',
   imageUrl: '',
   notify: true,
   autoReload: true,
+  // 방송 시작 시 새로고침한 탭으로 포커스, 열린 탭이 없으면 새 탭으로 열기.
+  openOnLive: true,
+  // 방송 중 카테고리가 바뀌면 알림.
+  notifyCategoryChange: false,
   keywords: [],
   source: 'manual',
+  addedAt: 0,
 });
 
 export function mergeSettings(stored) {

@@ -1,6 +1,6 @@
 {
   "name": "chzzk-alarm",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "치지직 라이브 알림 크롬 확장(개인용, MV3)",
   "type": "module",

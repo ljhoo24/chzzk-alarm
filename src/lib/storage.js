@@ -1,6 +1,7 @@
 // 확장 저장소 접근 계층. 서비스 워커는 언제든 종료될 수 있으므로 모든 상태는 여기에 둔다.
-//  local  : 브라우저 재시작 후에도 유지 (channels, channelState, settings, mockStatus, meta)
-//  session: 재시작 시 비워짐 (tabState, reloadLog, observedThisSession)
+//  local  : 브라우저 재시작 후에도 유지 (channels, channelState, settings, channelMute, history, eventLog, meta, mockStatus)
+//  session: 재시작 시 비워짐 (tabState, reloadLog, observedThisSession, mutedByUs)
+//  sync   : 구글 계정 동기화 사본(channels, settings) — sync.js가 관리
 
 import { mergeSettings, normalizeChannel } from './settings.js';
 import { reloadLogKey } from './reloadLogKey.js';
@@ -35,7 +36,8 @@ export async function saveChannels(channels) {
 export function upsertChannel(id, patch) {
   return serialized('channels', async () => {
     const channels = await getChannels();
-    channels[id] = normalizeChannel(id, { ...channels[id], ...patch });
+    const addedAt = channels[id]?.addedAt || patch.addedAt || Date.now();
+    channels[id] = normalizeChannel(id, { ...channels[id], ...patch, addedAt });
     await saveChannels(channels);
     return channels[id];
   });
@@ -184,5 +186,48 @@ export function markObservedThisSession(id) {
     if (all[id]) return;
     all[id] = true;
     await session.set({ observedThisSession: all });
+  });
+}
+
+// ---- 채널별 "오늘 알림 끄기" (local, 동기화 안 함) ----
+export async function getChannelMute() {
+  return getKey(local, 'channelMute', {});
+}
+
+export function setChannelMute(id, until) {
+  return serialized('channelMute', async () => {
+    const all = await getChannelMute();
+    const now = Date.now();
+    for (const [k, v] of Object.entries(all)) if (v <= now) delete all[k];
+    if (until) all[id] = until;
+    else delete all[id];
+    await local.set({ channelMute: all });
+  });
+}
+
+// ---- 방송 기록 ----
+export async function getHistory() {
+  return getKey(local, 'history', []);
+}
+
+export function updateHistory(fn) {
+  return serialized('history', async () => {
+    const next = fn(await getHistory());
+    await local.set({ history: next });
+    return next;
+  });
+}
+
+// ---- 우리가 음소거한 탭 (session) ----
+export async function getMutedByUs() {
+  return getKey(session, 'mutedByUs', {});
+}
+
+export function setMutedByUs(tabId, value) {
+  return serialized('mutedByUs', async () => {
+    const all = await getMutedByUs();
+    if (value) all[tabId] = true;
+    else delete all[tabId];
+    await session.set({ mutedByUs: all });
   });
 }
