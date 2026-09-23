@@ -4,6 +4,7 @@
 
 import { DEVICE_ONLY_SETTINGS, mergeSettings, normalizeChannel } from './settings.js';
 import { isChannelId } from './chzzkUrl.js';
+import { equalValue } from './equal.js';
 
 export const CHANNEL_PREFIX = 'ch:';
 export const SETTINGS_KEY = 'settings';
@@ -60,12 +61,10 @@ export function checkQuota(items) {
   return { ok: reason == null, reason, totalBytes, oversized, itemCount: keys.length };
 }
 
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-
 /** 원격(sync)을 local 항목과 같게 만드는 최소 변경. 우리 키가 아닌 항목은 건드리지 않는다. */
 export function diffItems(wanted, remote) {
   const set = {};
-  for (const [k, v] of Object.entries(wanted)) if (!same(v, remote?.[k])) set[k] = v;
+  for (const [k, v] of Object.entries(wanted)) if (!equalValue(v, remote?.[k])) set[k] = v;
   const remove = Object.keys(remote || {}).filter((k) => isOurKey(k) && !(k in wanted));
   return { set, remove, changed: Object.keys(set).length > 0 || remove.length > 0 };
 }

@@ -16,6 +16,7 @@ import {
   toSyncItems,
 } from './syncCodec.js';
 import { getChannels, getSettings, saveChannels } from './storage.js';
+import { equalValue } from './equal.js';
 
 const local = chrome.storage.local;
 const sync = chrome.storage.sync;
@@ -35,12 +36,10 @@ export async function getSyncStatus() {
   return (await local.get('syncStatus')).syncStatus ?? { state: 'off' };
 }
 
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-
 async function writeLocal(channels, settings) {
   const [curChannels, curSettings] = await Promise.all([getChannels(), getSettings()]);
-  if (!same(curChannels, channels)) await saveChannels(channels);
-  if (!same(curSettings, settings)) await local.set({ settings });
+  if (!equalValue(curChannels, channels)) await saveChannels(channels);
+  if (!equalValue(curSettings, settings)) await local.set({ settings });
 }
 
 async function pushNow() {

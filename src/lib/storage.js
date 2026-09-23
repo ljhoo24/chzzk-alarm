@@ -5,6 +5,7 @@
 
 import { mergeSettings, normalizeChannel } from './settings.js';
 import { reloadLogKey } from './reloadLogKey.js';
+import { equalValue } from './equal.js';
 
 const local = chrome.storage.local;
 const session = chrome.storage.session;
@@ -141,6 +142,7 @@ export async function getTabState() {
 export function putTabState(tabId, value) {
   return serialized('tabState', async () => {
     const all = await getTabState();
+    if (value == null ? !Object.hasOwn(all, tabId) : equalValue(all[tabId], value)) return;
     if (value == null) delete all[tabId];
     else all[tabId] = value;
     await session.set({ tabState: all });
@@ -212,8 +214,9 @@ export async function getHistory() {
 
 export function updateHistory(fn) {
   return serialized('history', async () => {
-    const next = fn(await getHistory());
-    await local.set({ history: next });
+    const current = await getHistory();
+    const next = fn(current);
+    if (next !== current) await local.set({ history: next });
     return next;
   });
 }
@@ -226,6 +229,7 @@ export async function getMutedByUs() {
 export function setMutedByUs(tabId, value) {
   return serialized('mutedByUs', async () => {
     const all = await getMutedByUs();
+    if (value ? all[tabId] === true : !Object.hasOwn(all, tabId)) return;
     if (value) all[tabId] = true;
     else delete all[tabId];
     await session.set({ mutedByUs: all });
