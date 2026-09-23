@@ -1,0 +1,145 @@
+// TransitionEngine: 이전 상태 + 새 관측 → 다음 상태 + 이벤트. 순수 함수.
+//
+// 원칙
+//  - 알림은 "새 방송 식별자(openDate)가 처음 OPEN으로 관측된 순간"에만 판정한다.
+//  - 조회 실패는 어떤 경우에도 status를 바꾸지 않는다(실패 횟수만 증가).
+//  - 알림 판정 결과는 alertedOpenDate로 기록해 같은 방송에 대해 두 번 판정하지 않는다.
+
+import { parseKst, isWithinDailyWindow } from './time.js';
+
+export const INITIAL_STATE = Object.freeze({
+  status: 'UNKNOWN',
+  openDate: null,
+  closeDate: null,
+  lastChangeAt: null,
+  lastCloseAt: null,
+  alertedOpenDate: null,
+  failCount: 0,
+  lastError: null,
+  lastCheckedAt: null,
+  lastSuccessAt: null,
+  title: '',
+  category: '',
+  viewers: 0,
+});
+
+/** 제목·카테고리 키워드 필터. 키워드가 없으면 통과. */
+export function matchesKeywords(keywords, title, category) {
+  const list = (keywords || []).map((k) => String(k).trim().toLowerCase()).filter(Boolean);
+  if (list.length === 0) return true;
+  const hay = `${title || ''}\n${category || ''}`.toLowerCase();
+  return list.some((k) => hay.includes(k));
+}
+
+/**
+ * 새 방송에 대한 알림 여부 판정.
+ * @returns {{notify: boolean, reason: string}}
+ */
+export function decideNotify(prev, obs, ctx) {
+  const { now, settings, channel, firstObsThisSession } = ctx;
+  const graceMs = settings.restartGraceMin * 60_000;
+  const openMs = parseKst(obs.openDate);
+
+  if (prev.alertedOpenDate && prev.alertedOpenDate === obs.openDate) {
+    return { notify: false, reason: 'already-alerted' };
+  }
+
+  // 송출 끊김 후 재시작: 알림만 억제(새로고침은 별도로 판정).
+  if (prev.status === 'CLOSE' && prev.lastCloseAt != null && openMs != null && openMs - prev.lastCloseAt < graceMs) {
+    return { notify: false, reason: 'restart-grace' };
+  }
+  // CLOSE를 관측하지 못한 채 openDate만 바뀐 경우(한 주기 안에 끊김·재시작).
+  if (prev.status === 'OPEN' && prev.lastSuccessAt != null && now - prev.lastSuccessAt <= graceMs) {
+    return { notify: false, reason: 'restart-grace' };
+  }
+
+  const startup = prev.status === 'UNKNOWN' || firstObsThisSession;
+  if (startup && !settings.notifyExistingOnStartup) {
+    return { notify: false, reason: 'startup-disabled' };
+  }
+  if (!channel.notify) return { notify: false, reason: 'channel-off' };
+  if (!matchesKeywords(channel.keywords, obs.title, obs.category)) {
+    return { notify: false, reason: 'keyword-filter' };
+  }
+  if (settings.quietHours.enabled && isWithinDailyWindow(now, settings.quietHours.start, settings.quietHours.end)) {
+    return { notify: false, reason: 'quiet-hours' };
+  }
+  return { notify: true, reason: startup ? 'startup' : 'went-live' };
+}
+
+/**
+ * @param prev 이전 상태(없으면 INITIAL_STATE)
+ * @param obs  StatusProvider Observation
+ * @param ctx  { now, settings, channel, firstObsThisSession }
+ * @returns {{ state, events: Array<{type: 'went_live'|'went_offline', ...}> }}
+ */
+export function evaluate(prevIn, obs, ctx) {
+  const prev = { ...INITIAL_STATE, ...(prevIn || {}) };
+  const { now } = ctx;
+  const events = [];
+
+  if (!obs.ok) {
+    return {
+      state: { ...prev, failCount: prev.failCount + 1, lastError: obs.error ?? 'unknown', lastCheckedAt: now },
+      events,
+    };
+  }
+
+  const base = {
+    ...prev,
+    failCount: 0,
+    lastError: null,
+    lastCheckedAt: now,
+    lastSuccessAt: now,
+    title: obs.title,
+    category: obs.category,
+    viewers: obs.viewers,
+  };
+
+  if (obs.status === 'OPEN') {
+    const isNewBroadcast = prev.status !== 'OPEN' || prev.openDate !== obs.openDate;
+    if (!isNewBroadcast) {
+      return { state: { ...base, status: 'OPEN' }, events };
+    }
+    const decision = decideNotify(prev, obs, ctx);
+    events.push({
+      type: 'went_live',
+      openDate: obs.openDate,
+      fromStatus: prev.status,
+      notify: decision.notify,
+      reason: decision.reason,
+    });
+    return {
+      state: {
+        ...base,
+        status: 'OPEN',
+        openDate: obs.openDate,
+        closeDate: null,
+        lastChangeAt: now,
+        alertedOpenDate: obs.openDate,
+      },
+      events,
+    };
+  }
+
+  // CLOSE
+  if (prev.status === 'CLOSE') {
+    return { state: { ...base, status: 'CLOSE' }, events };
+  }
+  const closeMs = parseKst(obs.closeDate);
+  if (prev.status === 'OPEN') {
+    events.push({ type: 'went_offline', openDate: prev.openDate });
+  }
+  return {
+    state: {
+      ...base,
+      status: 'CLOSE',
+      openDate: obs.openDate ?? prev.openDate,
+      closeDate: obs.closeDate,
+      lastChangeAt: now,
+      // UNKNOWN → CLOSE는 서버 종료 시각만 기록(없으면 null). OPEN → CLOSE는 없으면 관측 시각.
+      lastCloseAt: closeMs ?? (prev.status === 'OPEN' ? now : null),
+    },
+    events,
+  };
+}

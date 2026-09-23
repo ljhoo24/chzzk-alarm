@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "치지직 라이브 알림",
+  "version": "0.1.0",
+  "description": "등록한 치지직 채널의 방송 시작을 알리고, 열어 둔 오프라인 라이브 페이지를 자동으로 새로고침합니다.",
+  "minimum_chrome_version": "120",
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "permissions": ["alarms", "notifications", "storage"],
+  "host_permissions": [
+    "https://chzzk.naver.com/*",
+    "https://api.chzzk.naver.com/*",
+    "https://nng-phinf.pstatic.net/*"
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "치지직 라이브 알림",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

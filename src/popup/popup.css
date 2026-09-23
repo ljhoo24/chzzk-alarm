@@ -1,0 +1,79 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b6b6b;
+  --line: #e6e6e6;
+  --hover: #f3f3f3;
+  --accent: #00a86b;
+  --warn-bg: #fdecea;
+  --warn-fg: #b3261e;
+  --debug-bg: #fff4d6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1f22;
+    --fg: #e8e8e8;
+    --muted: #9a9a9a;
+    --line: #34363a;
+    --hover: #2a2c30;
+    --accent: #00d68f;
+    --warn-bg: #3b1f1d;
+    --warn-fg: #f2b8b5;
+    --debug-bg: #3a3320;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  width: 360px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.4 system-ui, "Malgun Gothic", sans-serif;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+h1 { margin: 0; font-size: 15px; }
+#live-count { color: var(--accent); }
+.actions button {
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.actions button:hover { background: var(--hover); }
+.actions button:disabled { opacity: .4; cursor: default; }
+.warning, .debug { margin: 8px 12px 0; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
+.warning { background: var(--warn-bg); color: var(--warn-fg); }
+.debug { background: var(--debug-bg); }
+ul { list-style: none; margin: 0; padding: 4px 0; max-height: 440px; overflow-y: auto; }
+li {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+li:hover { background: var(--hover); }
+li img, li .noimg { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--line); }
+.name { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.name .elapsed { font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta { color: var(--muted); font-size: 12px; }
+.empty { color: var(--muted); text-align: center; padding: 20px 12px; margin: 0; }
+footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}

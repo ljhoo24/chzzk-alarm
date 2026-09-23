@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>치지직 라이브 알림</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>라이브 <span id="live-count">0</span></h1>
+    <div class="actions">
+      <button id="refresh" title="지금 조회">↻</button>
+      <button id="options" title="설정">⚙</button>
+    </div>
+  </header>
+  <div id="warning" class="warning" hidden></div>
+  <div id="debug" class="debug" hidden>디버그 모드: 모의 상태 제공자 사용 중</div>
+  <ul id="live-list"></ul>
+  <p id="empty" class="empty" hidden></p>
+  <footer>
+    <span id="offline-count"></span>
+    <span id="last-poll"></span>
+  </footer>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

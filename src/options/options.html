@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>치지직 라이브 알림 설정</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1>치지직 라이브 알림</h1>
+
+    <section>
+      <h2>채널</h2>
+      <form id="add-form" class="add">
+        <input id="add-input" type="text" placeholder="채널 URL 또는 채널 ID 붙여 넣기 (예: https://chzzk.naver.com/live/…)" autocomplete="off">
+        <button type="submit">추가</button>
+      </form>
+      <p id="add-msg" class="msg" hidden></p>
+      <table id="channel-table">
+        <thead>
+          <tr>
+            <th>채널</th>
+            <th>상태</th>
+            <th title="방송 시작 알림">알림</th>
+            <th title="오프라인 라이브 페이지 자동 새로고침">새로고침</th>
+            <th title="제목·카테고리에 포함될 때만 알림(쉼표로 구분, 비우면 항상)">키워드</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="channel-rows"></tbody>
+      </table>
+      <p id="no-channels" class="muted" hidden>등록된 채널이 없습니다.</p>
+    </section>
+
+    <section>
+      <h2>설정</h2>
+      <form id="settings-form" class="settings">
+        <label>폴링 주기(초, 최소 30)<input name="pollIntervalSec" type="number" min="30" step="1"></label>
+        <label>재시작 유예 시간(분) — 이 안에 다시 켜지면 알림 생략<input name="restartGraceMin" type="number" min="0" step="1"></label>
+        <label>새로고침 지연(초) — 방송 감지 후 대기<input name="reloadDelaySec" type="number" min="0" max="20" step="1"></label>
+        <label>연속 실패 경고 기준(회)<input name="failWarnThreshold" type="number" min="1" step="1"></label>
+        <label class="check"><input name="notifyExistingOnStartup" type="checkbox">브라우저 시작 시 이미 진행 중인 방송도 알림</label>
+        <label class="check"><input name="requireInteraction" type="checkbox">알림을 닫을 때까지 화면에 유지</label>
+        <label class="check"><input name="skipNotifyIfActiveReload" type="checkbox">새로고침한 탭을 보고 있으면 알림 생략</label>
+        <fieldset>
+          <legend><label class="check"><input name="quietHours.enabled" type="checkbox">알림 금지 시간대</label></legend>
+          <input name="quietHours.start" type="time"> ~ <input name="quietHours.end" type="time">
+        </fieldset>
+        <div class="row">
+          <button type="submit">저장</button>
+          <span id="settings-msg" class="msg" hidden></span>
+        </div>
+      </form>
+    </section>
+
+    <section>
+      <h2>초기 설정 체크리스트</h2>
+      <ul class="checklist">
+        <li>Windows 설정 → 시스템 → 알림에서 <b>Google Chrome</b> 알림이 켜져 있는지 확인</li>
+        <li>Windows <b>방해 금지 모드(집중 지원)</b>가 켜져 있으면 알림 배너가 뜨지 않음(알림 센터에는 남음)</li>
+        <li>크롬 설정 → 시스템 → <b>Google Chrome을 닫았을 때 백그라운드 앱 계속 실행</b> 켜기 권장</li>
+        <li><button id="test-notify" type="button">테스트 알림 보내기</button></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>디버그</h2>
+      <label class="check"><input id="debug-mode" type="checkbox">디버그 모드(모의 상태 제공자 사용 — 실제 API를 호출하지 않음)</label>
+      <div id="debug-panel" hidden>
+        <p class="muted">채널 상태를 수동으로 전환한 뒤 "지금 폴링"을 누르면 전이 판정·알림·새로고침이 실행됩니다.</p>
+        <table>
+          <thead><tr><th>채널</th><th>모의 상태</th><th></th></tr></thead>
+          <tbody id="mock-rows"></tbody>
+        </table>
+      </div>
+      <div class="row">
+        <button id="poll-now" type="button">지금 폴링</button>
+        <span id="poll-msg" class="msg" hidden></span>
+      </div>
+      <h3>최근 이벤트</h3>
+      <ol id="event-log" class="log"></ol>
+    </section>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>
