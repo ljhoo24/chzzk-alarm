@@ -280,13 +280,51 @@ test('방송 시작: 열린 탭이 없으면 새 탭으로 열고 포커스', as
   assert.equal(fake.created.length, 1);
 });
 
-test('방송 시작: 이미 시청 중인 탭(방송 시작 후 로드)이 있으면 새 탭·포커스 없음', async () => {
+test('방송 시작: 이미 로드된 방송 탭도 클릭 없이 포커스, 새로고침·새 탭은 없음', async () => {
   await setMock(A, 'OPEN', Date.now() - 120_000);
   await openTab(21, liveUrl(A), Date.now()); // 방송 시작 2분 뒤 로드
   await runPoll();
   assert.deepEqual(fake.reloaded, []);
   assert.equal(fake.created.length, 0);
+  assert.deepEqual(fake.focused, [21]);
+  await runPoll();
+  assert.deepEqual(fake.focused, [21], '같은 방송은 다음 폴링에서 다시 포커스하지 않음');
+});
+
+test('방송 시작: 자동 새로고침을 꺼도 기존 탭으로 포커스', async () => {
+  await storage.upsertChannel(A, { autoReload: false });
+  await openTab(26, liveUrl(A), Date.now() - 60_000);
+  await setMock(A, 'OPEN', Date.now());
+  await runPoll();
+  assert.deepEqual(fake.reloaded, []);
+  assert.deepEqual(fake.focused, [26]);
+  assert.equal(fake.created.length, 0);
+});
+
+test('방송 시작: 다음 채널 조회 전에 알림 채널의 탭 이동 완료', async () => {
+  await openTab(27, liveUrl(A), Date.now() - 60_000);
+  await setMock(A, 'OPEN', Date.now());
+  const get = chrome.storage.local.get;
+  let reads = 0;
+  let focusedBeforeNextChannel;
+  chrome.storage.local.get = async function(key) {
+    if (key === 'mockStatus' && ++reads === 2) focusedBeforeNextChannel = [...fake.focused];
+    return get.call(this, key);
+  };
+  try { await runPoll(); }
+  finally { chrome.storage.local.get = get; }
+  assert.deepEqual(focusedBeforeNextChannel, [27]);
+  assert.deepEqual(fake.reloaded, [27]);
+});
+
+test('포커스 전환 끔: 이미 로드된 기존 탭도 포커스하지 않음', async () => {
+  await storage.saveSettings({ focusOnLive: false });
+  await setMock(A, 'OPEN', Date.now() - 120_000);
+  await openTab(28, liveUrl(A), Date.now());
+  await runPoll();
   assert.deepEqual(fake.focused, []);
+  assert.deepEqual(fake.reloaded, []);
+  assert.equal(fake.created.length, 0);
 });
 
 test('포커스 전환 끔: 새로고침 탭은 음소거, 새 탭은 백그라운드+음소거', async () => {

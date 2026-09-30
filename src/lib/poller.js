@@ -90,7 +90,7 @@ async function handleLiveChanged(channel, state, event, settings) {
  * 방송 시작 시 탭 포커스/열기.
  *  - 이번 주기에 새로고침한 탭이 있으면 그 탭으로 포커스(포커스 전환 설정이 켜진 경우)
  *  - 해당 채널의 라이브 탭이 하나도 없으면 새 탭으로 열기(포커스 전환이 꺼져 있으면 백그라운드 + 음소거)
- *  - 이미 방송 시작 후 연 탭이 있으면(시청 중) 건드리지 않음
+ *  - 기존 탭은 새로고침 대상이 아니어도 포커스 전환(설정이 켜진 경우)
  */
 async function openOrFocus(channelId, reloaded, ctx) {
   const { settings, states } = ctx;
@@ -103,7 +103,13 @@ async function openOrFocus(channelId, reloaded, ctx) {
     return true;
   }
   const existing = await chrome.tabs.query({ url: `${liveUrl(channelId)}*` });
-  if (existing.length) return false;
+  if (existing.length) {
+    if (!settings.focusOnLive) return false;
+    const target = existing.find((tab) => tab.active) ?? existing[0];
+    await focusTab(target);
+    await appendEventLog({ at: Date.now(), type: 'focus', channelId, tabId: target.id });
+    return true;
+  }
 
   await waitReloadDelay(settings, states[channelId]?.lastChangeAt);
   const { tab, created } = await openLiveTab(channelId, { active: settings.focusOnLive });
@@ -190,7 +196,20 @@ async function pollOnce() {
         summary.wentLive++;
         const states = await getAllChannelState();
         const reason = await handleWentLive(channel, state, ev, { channels, states, settings });
-        if (shouldOpenOnLive(channel, reason)) openTargets.push(id);
+        if (shouldOpenOnLive(channel, reason)) {
+          openTargets.push(id);
+          // 다른 채널의 느린 조회가 이미 표시한 알림의 탭 이동을 막지 않게 한다.
+          // 새로고침은 이번 채널로 제한하고, 나머지는 주기 끝에서 처리한다.
+          const ctx = { channels: { [id]: channel }, states, settings };
+          try {
+            const noMute = settings.focusOnLive ? new Set([id]) : new Set();
+            const reloaded = await reloadOfflineTabs(ctx, { noMute });
+            summary.reloaded += reloaded.length;
+            if (await openOrFocus(id, reloaded, ctx)) summary.opened++;
+          } catch (e) {
+            await appendEventLog({ at: Date.now(), type: 'open-failed', channelId: id, error: String(e?.message ?? e) });
+          }
+        }
       } else if (ev.type === 'live_changed') {
         summary.changed++;
         await handleLiveChanged(channel, state, ev, settings);
@@ -205,18 +224,10 @@ async function pollOnce() {
   await pruneChannelState(new Set(ids));
   const states = await getAllChannelState();
   const ctx = { channels, states, settings };
-  // 곧 포커스할 채널의 탭은 음소거하지 않는다.
+  // 이번 주기에 자동 포커스 대상으로 처리한 채널은 후속 새로고침에서도 음소거하지 않는다.
   const noMute = settings.focusOnLive ? new Set(openTargets) : new Set();
   const reloaded = await reloadOfflineTabs(ctx, { noMute });
-  summary.reloaded = reloaded.length;
-
-  for (const id of openTargets) {
-    try {
-      if (await openOrFocus(id, reloaded, ctx)) summary.opened++;
-    } catch (e) {
-      await appendEventLog({ at: Date.now(), type: 'open-failed', channelId: id, error: String(e?.message ?? e) });
-    }
-  }
+  summary.reloaded += reloaded.length;
 
   // 기록은 주기당 한 번에 저장(레코드가 많아도 쓰기 횟수 유지).
   await updateHistory((history) => observations.reduce((h, o) => applyObservation(h, o.channel, o.obs, o.now), history));
